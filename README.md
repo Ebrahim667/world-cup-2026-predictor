@@ -29,7 +29,7 @@ nations.
 9. [Project layout](#project-layout)
 10. [How to run it](#how-to-run-it)
 11. [Limitations & honest caveats](#limitations--honest-caveats)
-12. [Credits & licence](#credits--licence)
+12. [Data sources](#data-sources)
 
 ---
 
@@ -463,11 +463,13 @@ python src/_build_nb.py
 
 ---
 
-## Credits & licence
+## Data sources
+
+The datasets bundled in `data/` are included so the pipeline runs out of the
+box. They remain the work of their original authors, under their original terms:
 
 - **Historical results** — *International football results from 1872 to 2026*,
   compiled by Mart Jürisoo (public dataset, widely mirrored on Kaggle).
 - **Player ratings** — EA FC 26, via the public **EAFC26-DataHub** project.
 - **FIFA rankings & market odds** — FIFA (June 2026) and public market
   consensus, collected for benchmarking.
-
