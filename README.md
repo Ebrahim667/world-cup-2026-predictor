@@ -396,7 +396,7 @@ shell and imported by the notebook as a thin narrative layer.
 **Requirements:** Python 3.10+ (developed on 3.14), with:
 
 ```bash
-pip install numpy pandas torch matplotlib nbformat
+pip install -r requirements.txt
 ```
 
 > Note: TensorFlow is intentionally **not** used (it has no Python 3.14 build) —

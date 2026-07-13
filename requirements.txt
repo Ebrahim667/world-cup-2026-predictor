@@ -1,0 +1,13 @@
+# World Cup 2026 predictor — runtime dependencies.
+# Developed on Python 3.14. TensorFlow is intentionally absent (no 3.14 build);
+# the model is pure PyTorch.
+#
+#   pip install -r requirements.txt
+
+numpy>=2.0
+pandas>=2.0
+torch>=2.4
+matplotlib>=3.8
+
+# Only needed to regenerate the narrative notebook via src/_build_nb.py
+nbformat>=5.10
