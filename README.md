@@ -471,6 +471,3 @@ python src/_build_nb.py
 - **FIFA rankings & market odds** — FIFA (June 2026) and public market
   consensus, collected for benchmarking.
 
-This repository is provided for educational and research purposes. Please
-respect the original licences of the upstream datasets.
-```
