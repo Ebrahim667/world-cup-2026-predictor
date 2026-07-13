@@ -25,10 +25,11 @@ nations.
 5. [How the model works](#how-the-model-works)
 6. [The blend: history + current form + players](#the-blend-history--current-form--players)
 7. [Tournament simulation](#tournament-simulation)
-8. [Project layout](#project-layout)
-9. [How to run it](#how-to-run-it)
-10. [Limitations & honest caveats](#limitations--honest-caveats)
-11. [Credits & licence](#credits--licence)
+8. [Does it actually work? Backtesting past World Cups](#does-it-actually-work-backtesting-past-world-cups)
+9. [Project layout](#project-layout)
+10. [How to run it](#how-to-run-it)
+11. [Limitations & honest caveats](#limitations--honest-caveats)
+12. [Credits & licence](#credits--licence)
 
 ---
 
@@ -282,6 +283,90 @@ chart to `reports/title_odds.png`.
 
 ---
 
+## Does it actually work? Backtesting past World Cups
+
+A model that only ever predicts the future can never be wrong. So `src/backtest.py`
+replays the **entire pipeline** against tournaments whose outcome we already know
+— 2018 and 2022 — and asks: *standing on the eve of kick-off, knowing only what
+was knowable then, what would this thing have said?*
+
+### The rules of the test
+
+Backtesting a football model is mostly an exercise in **not cheating**, and there
+are two ways to cheat here. We block both:
+
+1. **No result leakage.** The match history is cut to games played *strictly
+   before* the tournament's opening day, and Elo and the neural network are
+   **retrained from scratch on that cut history alone**. The tournament never
+   sees its own games — not even indirectly through a rating.
+2. **No future leakage.** The backtest deliberately runs on **pure historical
+   Elo, with the FIFA/squad blend switched off.** Our FIFA-ranking and EA-player
+   files are *June 2026* snapshots; feeding 2026 squad ratings into a 2018
+   prediction would be leaking eight years of hindsight. The honest test is the
+   one the model could actually have run in 2018.
+
+Each backtest then simulates the real 32-team bracket for that year (5,000 Monte
+Carlo runs) and reports the pre-tournament title board.
+
+### Results
+
+| Tournament | Actual winner | Model's rank for the winner | Model's title odds | Model's own favourite |
+| --- | --- | :---: | ---: | --- |
+| **2018** | France | **#4** of 32 | 6.7% | Brazil (24.7%) |
+| **2022** | Argentina | **#2** of 32 | 18.0% | Brazil (29.7%) |
+
+Trained on nothing but results up to kick-off, the model put the eventual champion
+in its **top four both times** — broadly where the bookmakers had them too.
+
+### The more interesting result is the one it got wrong
+
+Look at the last column. **Brazil is the model's runaway favourite in both
+backtests — and Brazil won neither.** That is not bad luck; it is a systematic,
+diagnosable bias, and it is the most useful thing this backtest produces.
+
+The reason is structural. A pure-history Elo has one question it can answer —
+*how good has this team been, over the long run?* — and by that measure Brazil is
+the greatest football nation on earth. What history cannot see is that the Brazil
+of 2018 and 2022 was **not** the Brazil of its Elo. History is a slow-moving
+average, and it lags.
+
+That is precisely the hole the [blend](#the-blend-history--current-form--players)
+exists to fill — and it is exactly the signal the backtest is forbidden from
+using. So compare:
+
+| | Brazil's title odds |
+| --- | ---: |
+| Backtest model (history only) | **24.7% / 29.7%** |
+| Full 2026 pipeline (history + FIFA + squad) | **5.4%** |
+
+The FIFA ranking and the squad-strength index are what drag Brazil back down to
+earth. The backtest, by running with the blend switched off, effectively shows
+you **what the model looks like with its current-form correction removed** — and
+it is visibly, specifically worse. That is the case for the blend, and it is
+worth more than any single champion prediction.
+
+### Honest caveats about this backtest
+
+- **Two tournaments is two data points.** A World Cup is a brutally small sample:
+  even a *perfect* model would only have the eventual winner at ~20–25%, so
+  "ranked the winner #2" is a pleasant result, **not** proof of skill. Read the
+  table as a sanity check that the pipeline is not broken — not as a measured
+  accuracy figure.
+- **The right way to fix that** is to score the ~64 *individual match outcomes*
+  of each held-out tournament (Ranked Probability Score or log-loss, against an
+  Elo-only baseline), which would turn 2 observations into ~128. The time-cut
+  machinery here already supports it; it is the clearest next step for this repo.
+- **Hosts are simulated as neutral.** Russia (2018) and Qatar (2022) genuinely
+  played at home; the backtest gives them no home advantage.
+- **The backtest is not the 2026 model.** It runs a deliberately weakened,
+  blend-free version of the pipeline, for the leakage reasons above. Its numbers
+  should never be compared directly against the 2026 board.
+
+Run it yourself with `python src/backtest.py` (takes a few minutes — it retrains
+the network once per tournament).
+
+---
+
 ## Project layout
 
 ```
@@ -291,6 +376,7 @@ world cup project/
 │   └── external/                  # FIFA rankings, EA FC 26 players, squad strength, bookmaker odds
 ├── src/
 │   ├── worldcup.py                # the entire pipeline (data → Elo → model → blend → simulation)
+│   ├── backtest.py                # replays the pipeline against WC2018 / WC2022 (leakage-guarded)
 │   └── _build_nb.py               # regenerates the narrative notebook from the source
 ├── notebooks/
 │   └── world_cup_2026_prediction.ipynb   # readable, narrative walk-through
@@ -333,6 +419,13 @@ out = w.run_pipeline(n_sims=10000, epochs=60)
 print(out["sim"].head(12))      # title probabilities
 ```
 
+**Backtest against past World Cups** (retrains from scratch on pre-tournament
+history only — takes a few minutes):
+
+```bash
+python src/backtest.py
+```
+
 **Regenerate the narrative notebook:**
 
 ```bash
@@ -361,6 +454,12 @@ python src/_build_nb.py
   obvious avenue for future work.
 - **Bookmaker odds are a yardstick, not an input** — they're only used to sanity
   check the output.
+- **Validation is thin.** The 60% held-out match accuracy and the two-tournament
+  [backtest](#does-it-actually-work-backtesting-past-world-cups) are both weak
+  evidence on their own — the former because simply always picking the Elo
+  favourite scores similarly, the latter because two World Cups is two data
+  points. Match-level scoring (RPS / log-loss vs an Elo-only baseline) across
+  more tournaments is the honest next step.
 
 ---
 
